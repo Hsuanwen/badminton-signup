@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>羽球活動報名</h2>
+  <form id="regForm">
+    姓名: <input type="text" id="name" required><br><br>
+    電話: <input type="text" id="phone" required><br><br>
+    備註: <input type="text" id="note"><br><br>
+    <button type="submit">送出報名</button>
+  </form>
+
+  <script>
+    const scriptURL = '你的GAS網頁應用程式URL';
+    const form = document.getElementById('regForm');
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        note: document.getElementById('note').value
+      };
+
+      fetch(scriptURL, { 
+        method: 'POST', 
+        body: JSON.stringify(data)
+      })
+      .then(res => alert('報名成功！'))
+      .catch(error => console.error('錯誤!', error.message));
+    });
+  </script>
+</body>
+</html>
