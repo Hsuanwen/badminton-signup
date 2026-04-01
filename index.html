@@ -34,7 +34,6 @@
     </div>
 
     <div class="pt-2 pb-1"><h3 class="text-slate-500 font-bold text-sm tracking-wider px-1">選擇報名場次</h3></div>
-
     <div class="bg-app-surface rounded-2xl p-5 shadow-sm border border-slate-100 transition-transform">
       <div class="flex justify-between items-center mb-3">
         <h4 class="text-xl font-bold">一般散打</h4>
@@ -48,6 +47,17 @@
         立即報名
       </button>
     </div>
+
+    <div class="pt-4 pb-1"><h3 class="text-slate-500 font-bold text-sm tracking-wider px-1">管理我的報名</h3></div>
+    <div class="bg-app-surface rounded-2xl p-5 shadow-sm border border-slate-100">
+      <p class="text-sm text-app-text mb-3">輸入報名時的電話，可查詢狀態或取消報名釋出名額。</p>
+      <div class="flex gap-2">
+        <input type="tel" id="queryPhone" placeholder="輸入電話號碼" class="flex-1 bg-slate-50 border-none text-app-primary font-medium rounded-xl p-3.5 focus:ring-2 focus:ring-slate-200 outline-none transition-all">
+        <button id="queryBtn" onclick="queryStatus()" class="bg-slate-700 text-white font-bold py-3.5 px-6 rounded-xl active:bg-slate-800 transition-all shadow-sm whitespace-nowrap">
+          查詢
+        </button>
+      </div>
+    </div>
   </main>
 
   <div id="backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300" onclick="closeBottomSheet()"></div>
@@ -59,109 +69,84 @@
       <p id="selectedType" class="text-app-accent font-bold mb-6 text-sm">已選擇：</p>
       <form id="regForm" class="space-y-4">
         <input type="hidden" id="type">
-        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">姓名 Name</label><input type="text" id="name" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
-        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">電話 Phone</label><input type="tel" id="phone" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
-        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">備註 Note (選填)</label><input type="text" id="note" class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">姓名</label><input type="text" id="name" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">電話</label><input type="tel" id="phone" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">備註</label><input type="text" id="note" class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
         <div class="pt-4"><button type="submit" id="submitBtn" class="w-full bg-app-primary text-white font-bold text-lg py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-center items-center gap-2">確認送出</button></div>
       </form>
     </div>
+  </div>
+
+  <div id="queryModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 px-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="queryModalContent">
+      </div>
   </div>
 
   <script>
     // 【重要】填入你的 GAS 網址
     const scriptURL = 'https://script.google.com/macros/s/AKfycbz4cf5tRVhNxooTtxzVQAXtJZv4m8MRo58DVcS_s6xXaC6pOki-2TMs1ybYSGT8KqRn/exec'; 
     
+    // --- 載入活動資料與狀態判斷 (不變) ---
     function loadEventData() {
       fetch(scriptURL)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
           document.getElementById('eventDate').innerText = data.date;
           document.getElementById('eventTime').innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${data.time}`;
           document.getElementById('deadlineText').innerText = `截止: ${data.deadline}`;
 
-          // 計算人數與剩餘名額
           const current = parseInt(data.currentCount) || 0;
           const max = parseInt(data.maxCount) || 0;
           const remain = (max - current > 0) ? (max - current) : 0;
 
-          // 移除骨架屏動畫並填入數字
           document.getElementById('countText').classList.remove('animate-pulse');
           document.getElementById('countText').innerText = `目前 ${current} / ${max} 人`;
-          
           const remainBadge = document.getElementById('remainBadge');
           remainBadge.classList.remove('animate-pulse', 'bg-slate-100', 'text-slate-500');
 
-          // 判斷是否超過截止時間 或 是否額滿
           checkStatus(data.deadline, current, max, remainBadge);
-        })
-        .catch(error => console.error('讀取活動資料失敗:', error));
+        }).catch(err => console.error(err));
     }
 
-    // 狀態判斷邏輯 (整合時間與人數)
-    function checkStatus(deadlineString, current, max, remainBadge) {
+    function checkStatus(deadline, current, max, badge) {
       const now = new Date();
-      const deadlineDate = new Date(deadlineString); 
-      
+      const end = new Date(deadline); 
       const topBadge = document.getElementById('statusBadge');
-      const btnNormal = document.getElementById('btnNormal');
+      const btn = document.getElementById('btnNormal');
 
-      // 情況 1：時間已截止 (優先級最高)
-      if (now > deadlineDate) {
-        topBadge.innerText = '報名已截止';
-        topBadge.className = 'bg-app-alert text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm shadow-rose-500/30';
-        
-        remainBadge.innerText = `剩餘 ${max - current > 0 ? max - current : 0} 位`;
-        remainBadge.className = 'bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-xs font-bold';
-        
-        disableButton(btnNormal, '已截止');
-      } 
-      // 情況 2：時間未截止，但人數已滿
-      else if (current >= max) {
-        topBadge.innerText = '報名開放中';
-        topBadge.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm';
-        
-        remainBadge.innerText = '名額已滿';
-        remainBadge.className = 'bg-rose-50 text-app-alert px-2 py-1 rounded-lg text-xs font-bold';
-        
-        disableButton(btnNormal, '名額已滿');
-      } 
-      // 情況 3：開放報名中，且還有名額
-      else {
-        topBadge.innerText = '報名開放中';
-        topBadge.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm';
-        
-        remainBadge.innerText = `剩餘 ${max - current} 位`;
-        remainBadge.className = 'bg-teal-50 text-app-accent px-2 py-1 rounded-lg text-xs font-bold';
+      if (now > end) {
+        topBadge.innerText = '報名已截止'; topBadge.className = 'bg-app-alert text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm shadow-rose-500/30';
+        badge.innerText = `剩餘 ${max-current>0?max-current:0} 位`; badge.className = 'bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-xs font-bold';
+        disableButton(btn, '已截止');
+      } else if (current >= max) {
+        topBadge.innerText = '報名開放中'; topBadge.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm';
+        badge.innerText = '名額已滿'; badge.className = 'bg-rose-50 text-app-alert px-2 py-1 rounded-lg text-xs font-bold';
+        disableButton(btn, '名額已滿');
+      } else {
+        topBadge.innerText = '報名開放中'; topBadge.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm';
+        badge.innerText = `剩餘 ${max - current} 位`; badge.className = 'bg-teal-50 text-app-accent px-2 py-1 rounded-lg text-xs font-bold';
       }
     }
-
-    // 禁用按鈕的通用函數
-    function disableButton(btn, text) {
-      btn.onclick = null; // 移除點擊事件
-      btn.innerText = text;
-      btn.className = 'w-full mt-4 bg-slate-200 text-slate-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition-all';
-    }
+    function disableButton(btn, text) { btn.onclick = null; btn.innerText = text; btn.className = 'w-full mt-4 bg-slate-200 text-slate-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition-all'; }
 
     loadEventData();
 
-    // ---- 表單控制與送出邏輯 ----
+    // --- 報名表單邏輯 (加入 action: 'signup') ---
     const bottomSheet = document.getElementById('bottomSheet');
     const backdrop = document.getElementById('backdrop');
     const form = document.getElementById('regForm');
     const submitBtn = document.getElementById('submitBtn');
-    const typeInput = document.getElementById('type');
 
     function openBottomSheet(typeName) {
       document.getElementById('selectedType').textContent = '已選擇：' + typeName;
-      typeInput.value = typeName;
+      document.getElementById('type').value = typeName;
       backdrop.classList.remove('opacity-0', 'pointer-events-none');
       backdrop.classList.add('opacity-100');
       bottomSheet.classList.remove('translate-y-full');
     }
 
     function closeBottomSheet() {
-      backdrop.classList.remove('opacity-100');
-      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      backdrop.classList.remove('opacity-100'); backdrop.classList.add('opacity-0', 'pointer-events-none');
       bottomSheet.classList.add('translate-y-full');
       setTimeout(() => form.reset(), 300);
     }
@@ -169,10 +154,11 @@
     form.addEventListener('submit', e => {
       e.preventDefault();
       const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 處理中...`;
-      submitBtn.disabled = true;
+      submitBtn.innerHTML = '處理中...'; submitBtn.disabled = true;
 
+      // 【更新】加入 action 參數
       const data = {
+        action: 'signup',
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         note: document.getElementById('note').value,
@@ -180,18 +166,77 @@
       };
 
       fetch(scriptURL, { method: 'POST', body: JSON.stringify(data) })
-      .then(res => {
-        alert('報名成功！期待在球場見到你！');
-        closeBottomSheet();
-        // 報名成功後，讓網頁自動重新載入，以顯示最新剩餘人數
-        setTimeout(() => window.location.reload(), 500);
-      })
-      .catch(error => alert('發生錯誤，請稍後再試。'))
-      .finally(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-      });
+      .then(res => { alert('報名成功！'); setTimeout(() => window.location.reload(), 500); })
+      .catch(err => alert('發生錯誤'))
+      .finally(() => { submitBtn.innerHTML = originalText; submitBtn.disabled = false; });
     });
+
+    // --- 【新增】查詢與取消邏輯 ---
+    const queryModal = document.getElementById('queryModal');
+    const queryModalContent = document.getElementById('queryModalContent');
+    const queryBtn = document.getElementById('queryBtn');
+
+    function closeQueryModal() {
+      queryModal.classList.add('opacity-0');
+      queryModalContent.classList.remove('scale-100'); queryModalContent.classList.add('scale-95');
+      setTimeout(() => queryModal.classList.add('hidden'), 300);
+    }
+
+    function queryStatus() {
+      const phone = document.getElementById('queryPhone').value.trim();
+      if(!phone) { alert('請輸入電話號碼'); return; }
+
+      queryBtn.innerHTML = '...'; queryBtn.disabled = true;
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'query', phone: phone })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if(res.result === 'found') {
+          // 渲染查詢成功的畫面與取消按鈕
+          queryModalContent.innerHTML = `
+            <h3 class="text-2xl font-black text-app-primary mb-2 text-center">🎉 報名成功</h3>
+            <div class="bg-slate-50 p-4 rounded-xl mb-6 mt-4">
+              <p class="text-slate-500 text-sm mb-1">報名姓名：<span class="text-app-primary font-bold text-base ml-1">${res.data.name}</span></p>
+              <p class="text-slate-500 text-sm mb-1">報名電話：<span class="text-app-primary font-bold text-base ml-1">${res.data.phone}</span></p>
+              <p class="text-slate-500 text-sm">報名場次：<span class="text-app-accent font-bold text-base ml-1">${res.data.type}</span></p>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="closeQueryModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl active:bg-slate-200 transition-colors">關閉</button>
+              <button onclick="cancelRegistration('${res.data.phone}')" class="flex-1 bg-rose-50 text-app-alert border border-rose-100 font-bold py-3.5 rounded-xl active:bg-rose-100 transition-colors">取消報名</button>
+            </div>
+          `;
+          // 顯示 Modal 動畫
+          queryModal.classList.remove('hidden');
+          setTimeout(() => { queryModal.classList.remove('opacity-0'); queryModalContent.classList.remove('scale-95'); queryModalContent.classList.add('scale-100'); }, 10);
+        } else {
+          alert('找不到此電話號碼的報名紀錄喔！請確認電話是否正確。');
+        }
+      })
+      .catch(err => alert('查詢失敗，請稍後再試'))
+      .finally(() => { queryBtn.innerHTML = '查詢'; queryBtn.disabled = false; });
+    }
+
+    function cancelRegistration(phone) {
+      if(!confirm('確定要取消報名嗎？釋出的名額將會讓給其他人喔！')) return;
+
+      // 替換畫面顯示取消中
+      queryModalContent.innerHTML = `<div class="text-center py-10"><p class="text-app-primary font-bold animate-pulse">正在為您取消報名...</p></div>`;
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cancel', phone: phone })
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert('已成功取消報名！期待下次相聚。');
+        closeQueryModal();
+        setTimeout(() => window.location.reload(), 500); // 重整網頁，更新人數
+      })
+      .catch(err => alert('取消失敗，請稍後再試'));
+    }
   </script>
 </body>
 </html>
