@@ -24,7 +24,7 @@
 <body class="bg-app-bg font-sans text-app-primary min-h-screen pb-24 relative">
 
   <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 py-4 flex justify-center items-center">
-    <h1 class="text-lg font-extrabold tracking-wide">🏸 週末羽球俱樂部</h1>
+    <h1 class="text-lg font-extrabold tracking-wide">🏸 羽球報名系統</h1>
   </header>
 
   <main class="max-w-md mx-auto mt-4 px-4 space-y-4">
@@ -33,10 +33,11 @@
       <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full border-4 border-white/10"></div>
       
       <div class="text-app-accent font-bold text-sm tracking-widest mb-1">NEXT GAME</div>
-      <h2 id="eventDate" class="text-3xl font-black mb-1">載入中...</h2>
-      <p id="eventTime" class="text-slate-300 font-medium text-lg flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        --:--
+      <h2 id="eventDate" class="text-3xl font-black mb-1">
+			<div class="h-8 bg-white/20 rounded animate-pulse w-3/4"></div>
+	  </h2>
+	  <p id="eventTime" class="text-slate-300 font-medium text-lg flex items-center gap-2 mt-2">
+			<div class="h-5 bg-white/20 rounded animate-pulse w-1/2"></div>
       </p>
       <div class="mt-5 flex items-center gap-3">
         <span id="statusBadge" class="bg-slate-700 text-white px-3 py-1 rounded-full text-xs font-bold transition-colors">讀取狀態...</span>
