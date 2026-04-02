@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>羽球報名系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { colors: { app: { bg: '#F8FAFC', surface: '#FFFFFF', primary: '#0F172A', text: '#64748B', accent: '#0D9488', accent_hover: '#0F766E', alert: '#F43F5E' } } } }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { display: none; }
+    body { -ms-overflow-style: none; scrollbar-width: none; -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-app-bg font-sans text-app-primary min-h-screen pb-24 relative">
+
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 py-4 flex justify-center items-center">
+    <h1 class="text-lg font-extrabold tracking-wide">🏸 週末羽球俱樂部</h1>
+  </header>
+
+  <main class="max-w-md mx-auto mt-4 px-4 space-y-4">
+
+    <!-- 活動輪播 -->
+    <div class="relative overflow-hidden" id="eventCarousel">
+      <div id="carouselTrack" class="flex transition-transform duration-300 ease-out">
+        <!-- 預設 loading 卡片 -->
+        <div class="min-w-full">
+          <div class="bg-app-primary rounded-3xl p-6 text-white shadow-lg shadow-slate-200/50 relative overflow-hidden min-h-[160px]">
+            <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full border-4 border-white/10"></div>
+            <div class="text-app-accent font-bold text-sm tracking-widest mb-1">NEXT GAME</div>
+            <h2 class="text-3xl font-black mb-1"><div class="h-8 bg-white/20 rounded animate-pulse w-3/4"></div></h2>
+            <div class="text-slate-300 font-medium text-lg flex items-center gap-2 mt-2"><div class="h-5 bg-white/20 rounded animate-pulse w-1/2"></div></div>
+            <div class="mt-5 flex items-center gap-3">
+              <span class="bg-slate-700 text-white px-3 py-1 rounded-full text-xs font-bold">讀取狀態...</span>
+              <span class="text-slate-400 text-xs">截止: --/-- --:--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 圓點指示器 -->
+      <div id="carouselDots" class="flex justify-center gap-2 mt-3"></div>
+    </div>
+
+    <div class="pt-2 pb-1"><h3 class="text-slate-500 font-bold text-sm tracking-wider px-1">選擇報名場次</h3></div>
+    <div class="bg-app-surface rounded-2xl p-5 shadow-sm border border-slate-100 transition-transform">
+      <div class="flex justify-between items-center mb-3">
+        <h4 class="text-xl font-bold">一般散打</h4>
+        <span id="remainBadge" class="bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-xs font-bold animate-pulse">計算中...</span>
+      </div>
+      <div class="flex justify-between items-end">
+        <div><span id="priceText" class="text-2xl font-extrabold">NT$ 0</span><span class="text-app-text text-sm ml-1">/ 人</span></div>
+        <div id="countText" class="text-app-text text-sm font-medium animate-pulse">目前 - / - 人</div>
+      </div>
+      <button id="btnNormal" class="w-full mt-4 bg-app-accent text-white font-bold py-3.5 rounded-xl shadow-md active:bg-app-accent_hover transition-colors">
+        立即報名
+      </button>
+    </div>
+
+    <div class="pt-4 pb-1"><h3 class="text-slate-500 font-bold text-sm tracking-wider px-1">管理我的報名</h3></div>
+    <div class="bg-app-surface rounded-2xl p-5 shadow-sm border border-slate-100">
+      <p class="text-sm text-app-text mb-3">輸入報名時的電話，可查詢狀態或取消報名釋出名額。</p>
+      <div class="flex gap-2">
+        <input type="tel" id="queryPhone" placeholder="輸入電話號碼" class="flex-1 bg-slate-50 border-none text-app-primary font-medium rounded-xl p-3.5 focus:ring-2 focus:ring-slate-200 outline-none transition-all">
+        <button id="queryBtn" onclick="queryStatus()" class="bg-slate-700 text-white font-bold py-3.5 px-6 rounded-xl active:bg-slate-800 transition-all shadow-sm whitespace-nowrap">
+          查詢
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <div id="backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300" onclick="closeBottomSheet()"></div>
+
+  <div id="bottomSheet" class="fixed inset-x-0 bottom-0 z-50 transform translate-y-full transition-transform duration-300 ease-out max-w-md mx-auto">
+    <div class="bg-white rounded-t-3xl p-6 shadow-2xl pb-10">
+      <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6"></div>
+      <h3 class="text-2xl font-black text-app-primary mb-1">確認報名資料</h3>
+      <p id="selectedType" class="text-app-accent font-bold mb-6 text-sm">已選擇：</p>
+      <form id="regForm" class="space-y-4">
+        <input type="hidden" id="type">
+        <input type="hidden" id="eventDate">
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">姓名</label><input type="text" id="name" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">電話</label><input type="tel" id="phone" required class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary font-medium focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div><label class="block text-xs font-bold text-app-text mb-1 uppercase tracking-wider">備註</label><input type="text" id="note" class="w-full bg-slate-50 border-none rounded-xl p-4 text-app-primary focus:ring-2 focus:ring-app-accent outline-none transition-all"></div>
+        <div class="pt-4"><button type="submit" id="submitBtn" class="w-full bg-app-primary text-white font-bold text-lg py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-center items-center gap-2">確認送出</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="queryModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center z-50 px-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="queryModalContent">
+      </div>
+  </div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbz4cf5tRVhNxooTtxzVQAXtJZv4m8MRo58DVcS_s6xXaC6pOki-2TMs1ybYSGT8KqRn/exec';
+
+    let events = [];
+    let currentSlide = 0;
+    let touchStartX = 0;
+
+    // --- 輪播：渲染卡片 ---
+    function renderSlides() {
+      const track = document.getElementById('carouselTrack');
+      track.innerHTML = events.map((ev, i) => `
+        <div class="min-w-full">
+          <div class="bg-app-primary rounded-3xl p-6 text-white shadow-lg shadow-slate-200/50 relative overflow-hidden min-h-[160px]">
+            <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full border-4 border-white/10"></div>
+            <div class="text-app-accent font-bold text-sm tracking-widest mb-1">NEXT GAME</div>
+            <h2 class="text-3xl font-black mb-1">${ev.date}</h2>
+            <div class="text-slate-300 font-medium text-lg flex items-center gap-2 mt-2">
+              <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              ${ev.time}
+            </div>
+            <div class="mt-5 flex items-center gap-3">
+              <span id="statusBadge${i}" class="bg-slate-700 text-white px-3 py-1 rounded-full text-xs font-bold transition-colors">讀取狀態...</span>
+              <span class="text-slate-400 text-xs">截止: ${ev.deadline}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // 更新所有卡片的狀態 badge
+      events.forEach((ev, i) => {
+        const badge = document.getElementById(`statusBadge${i}`);
+        if (!badge) return;
+        const now = new Date();
+        const end = new Date(ev.deadline);
+        if (now > end) {
+          badge.innerText = '報名已截止';
+          badge.className = 'bg-app-alert text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm shadow-rose-500/30';
+        } else {
+          badge.innerText = '報名開放中';
+          badge.className = 'bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm';
+        }
+      });
+    }
+
+    // --- 輪播：渲染圓點 ---
+    function renderDots() {
+      const dotsEl = document.getElementById('carouselDots');
+      if (events.length <= 1) { dotsEl.innerHTML = ''; return; }
+      dotsEl.innerHTML = events.map((_, i) => `
+        <button onclick="goToSlide(${i})" class="dot h-2 rounded-full transition-all duration-300 ${i === 0 ? 'bg-app-accent w-5' : 'bg-slate-300 w-2'}"></button>
+      `).join('');
+    }
+
+    // --- 輪播：切換到指定頁 ---
+    function goToSlide(index) {
+      currentSlide = index;
+      document.getElementById('carouselTrack').style.transform = `translateX(-${index * 100}%)`;
+      document.querySelectorAll('.dot').forEach((dot, i) => {
+        dot.className = `dot h-2 rounded-full transition-all duration-300 ${i === index ? 'bg-app-accent w-5' : 'bg-slate-300 w-2'}`;
+      });
+      updateSignupCard();
+    }
+
+    // --- 更新報名卡片（依目前顯示的活動）---
+    function updateSignupCard() {
+      if (!events.length) return;
+      const ev = events[currentSlide];
+      const current = parseInt(ev.currentCount) || 0;
+      const max = parseInt(ev.maxCount) || 0;
+      const price = parseInt(ev.price) || 0;
+
+      document.getElementById('priceText').innerText = `NT$ ${price}`;
+      document.getElementById('countText').innerText = `目前 ${current} / ${max} 人`;
+      document.getElementById('countText').classList.remove('animate-pulse');
+
+      const remainBadge = document.getElementById('remainBadge');
+      remainBadge.classList.remove('animate-pulse', 'bg-slate-100', 'text-slate-500');
+
+      const btn = document.getElementById('btnNormal');
+      // 重置按鈕狀態
+      btn.className = 'w-full mt-4 bg-app-accent text-white font-bold py-3.5 rounded-xl shadow-md active:bg-app-accent_hover transition-colors';
+      btn.innerText = '立即報名';
+      btn.onclick = () => openBottomSheet('一般散打');
+
+      checkStatus(ev.deadline, current, max, remainBadge, btn);
+    }
+
+    // --- 載入活動資料 ---
+    function loadEventData() {
+      fetch(scriptURL)
+        .then(res => res.json())
+        .then(data => {
+          // 兼容單一物件或陣列
+          events = Array.isArray(data) ? data : [data];
+          renderSlides();
+          renderDots();
+          setupSwipe();
+          updateSignupCard();
+        })
+        .catch(err => console.error(err));
+    }
+
+    function checkStatus(deadline, current, max, badge, btn) {
+      const now = new Date();
+      const end = new Date(deadline);
+
+      if (now > end) {
+        badge.innerText = `剩餘 ${max - current > 0 ? max - current : 0} 位`;
+        badge.className = 'bg-slate-100 text-slate-500 px-2 py-1 rounded-lg text-xs font-bold';
+        disableButton(btn, '已截止');
+      } else if (current >= max) {
+        badge.innerText = '名額已滿';
+        badge.className = 'bg-rose-50 text-app-alert px-2 py-1 rounded-lg text-xs font-bold';
+        disableButton(btn, '名額已滿');
+      } else {
+        badge.innerText = `剩餘 ${max - current} 位`;
+        badge.className = 'bg-teal-50 text-app-accent px-2 py-1 rounded-lg text-xs font-bold';
+      }
+    }
+
+    function disableButton(btn, text) {
+      btn.onclick = null;
+      btn.innerText = text;
+      btn.className = 'w-full mt-4 bg-slate-200 text-slate-400 font-bold py-3.5 rounded-xl cursor-not-allowed transition-all';
+    }
+
+    // --- 滑動手勢 ---
+    function setupSwipe() {
+      const carousel = document.getElementById('eventCarousel');
+      carousel.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+      carousel.addEventListener('touchend', e => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) < 50) return;
+        if (diff > 0 && currentSlide < events.length - 1) goToSlide(currentSlide + 1);
+        else if (diff < 0 && currentSlide > 0) goToSlide(currentSlide - 1);
+      }, { passive: true });
+    }
+
+    loadEventData();
+
+    // --- 報名表單邏輯 ---
+    const bottomSheet = document.getElementById('bottomSheet');
+    const backdrop = document.getElementById('backdrop');
+    const form = document.getElementById('regForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function openBottomSheet(typeName) {
+      const ev = events[currentSlide];
+      document.getElementById('selectedType').textContent = `已選擇：${typeName}　${ev ? ev.date : ''}`;
+      document.getElementById('type').value = typeName;
+      document.getElementById('eventDate').value = ev ? ev.date : '';
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      backdrop.classList.add('opacity-100');
+      bottomSheet.classList.remove('translate-y-full');
+    }
+
+    function closeBottomSheet() {
+      backdrop.classList.remove('opacity-100');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      bottomSheet.classList.add('translate-y-full');
+      setTimeout(() => form.reset(), 300);
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '處理中...'; submitBtn.disabled = true;
+
+      const data = {
+        action: 'signup',
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        note: document.getElementById('note').value,
+        type: document.getElementById('type').value,
+        eventDate: document.getElementById('eventDate').value
+      };
+
+      fetch(scriptURL, { method: 'POST', body: JSON.stringify(data) })
+      .then(res => { alert('報名成功！'); setTimeout(() => window.location.reload(), 500); })
+      .catch(err => alert('發生錯誤'))
+      .finally(() => { submitBtn.innerHTML = originalText; submitBtn.disabled = false; });
+    });
+
+    // --- 查詢與取消邏輯 ---
+    const queryModal = document.getElementById('queryModal');
+    const queryModalContent = document.getElementById('queryModalContent');
+    const queryBtn = document.getElementById('queryBtn');
+
+    function closeQueryModal() {
+      queryModal.classList.add('opacity-0');
+      queryModalContent.classList.remove('scale-100');
+      queryModalContent.classList.add('scale-95');
+      setTimeout(() => queryModal.classList.add('hidden'), 300);
+    }
+
+    function queryStatus() {
+      const phone = document.getElementById('queryPhone').value.trim();
+      if (!phone) { alert('請輸入電話號碼'); return; }
+
+      queryBtn.innerHTML = '...'; queryBtn.disabled = true;
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'query', phone: phone })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.result === 'found') {
+          queryModalContent.innerHTML = `
+            <h3 class="text-2xl font-black text-app-primary mb-2 text-center">🎉 報名成功</h3>
+            <div class="bg-slate-50 p-4 rounded-xl mb-6 mt-4">
+              <p class="text-slate-500 text-sm mb-1">報名姓名：<span class="text-app-primary font-bold text-base ml-1">${res.data.name}</span></p>
+              <p class="text-slate-500 text-sm mb-1">報名電話：<span class="text-app-primary font-bold text-base ml-1">${res.data.phone}</span></p>
+              <p class="text-slate-500 text-sm">報名場次：<span class="text-app-accent font-bold text-base ml-1">${res.data.type}</span></p>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="closeQueryModal()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl active:bg-slate-200 transition-colors">關閉</button>
+              <button onclick="cancelRegistration('${res.data.phone}')" class="flex-1 bg-rose-50 text-app-alert border border-rose-100 font-bold py-3.5 rounded-xl active:bg-rose-100 transition-colors">取消報名</button>
+            </div>
+          `;
+          queryModal.classList.remove('hidden');
+          setTimeout(() => {
+            queryModal.classList.remove('opacity-0');
+            queryModalContent.classList.remove('scale-95');
+            queryModalContent.classList.add('scale-100');
+          }, 10);
+        } else {
+          alert('找不到此電話號碼的報名紀錄喔！請確認電話是否正確。');
+        }
+      })
+      .catch(err => alert('查詢失敗，請稍後再試'))
+      .finally(() => { queryBtn.innerHTML = '查詢'; queryBtn.disabled = false; });
+    }
+
+    function cancelRegistration(phone) {
+      if (!confirm('確定要取消報名嗎？釋出的名額將會讓給其他人喔！')) return;
+
+      queryModalContent.innerHTML = `<div class="text-center py-10"><p class="text-app-primary font-bold animate-pulse">正在為您取消報名...</p></div>`;
+
+      fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cancel', phone: phone })
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert('已成功取消報名！期待下次相聚。');
+        closeQueryModal();
+        setTimeout(() => window.location.reload(), 500);
+      })
+      .catch(err => alert('取消失敗，請稍後再試'));
+    }
+  </script>
+</body>
+</html>
